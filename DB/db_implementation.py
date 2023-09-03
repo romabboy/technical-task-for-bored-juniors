@@ -1,76 +1,85 @@
 from pathlib import Path
-from sqlalchemy import create_engine, Column, String, Integer, Float
-from sqlalchemy.orm import sessionmaker, declarative_base
 from os import path
+import sqlite3
 
 NAME_DB = 'sqlite3.db'
+TABLE_NAME = 'activity'
 BASE_DIR = Path(__file__).resolve().parent.parent
 PATH_DB = path.join(BASE_DIR,NAME_DB)
 
-Base = declarative_base()
-
-class Activity(Base):
-    __tablename__ = 'activity'
-
-    id = Column('id', Integer, primary_key=True, autoincrement=True)
-    activity = Column('activity',String)
-    type = Column('type', String)
-    participants = Column('participants', Integer)
-    price = Column('price', Float)
-    link = Column('link', String)
-    key = Column('key', String)
-    accessibility = Column('accessibility', Float)
-
-    def __init__(self,activity,type,participants,price,link,key,accessibility):
-        self.activity = activity
-        self.type = type
-        self.participants = participants
-        self.price = price
-        self.link = link
-        self.key = key
-        self.accessibility = accessibility
-
-    def __repr__(self):
-        return f'activity -> "{self.activity}", type -> "{self.type}", participants -> {self.participants}' \
-               f'price -> {self.price}, link -> "{self.link}", key -> "{self.key}", accessibility -> "{self.accessibility}"'
 
 class Activity_DB:
     def __init__(self):
-        self.session = None
-        self.engine = None
+        self.db = None
 
-    def create_field(self,  activity: dict):
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
+    def create_field(self, activity: dict):
+        cursor = self.db.cursor()
 
-        activity_field = Activity(**activity)
+        cursor.execute(f"""INSERT INTO {TABLE_NAME} (activity,type,participants,price,link,key,accessibility)
+                        VALUES ("{activity['activity']}","{activity['type']}",{activity['participants']},{activity['price']},
+                                "{activity['link']}","{activity['key']}",{activity['accessibility']})
+        """)
 
-        self.session.add(activity_field)
-        self.session.commit()
+        self.db.commit()
 
-    def get_latest_entries(self,quantity=5):
-        if not self.session:
-            Session = sessionmaker(bind=self.engine)
-            self.session = Session()
+    def get_latest_entries(self, quantity=5):
+        cursor = self.db.cursor()
 
-        latest_entries = self.session.query(Activity).order_by(Activity.id.desc()).limit(quantity).all()
-        latest_entries = '\n'.join([str(entire) for entire in latest_entries])
-        return latest_entries
-    def connect(self):
-        self.engine = create_engine(f'sqlite:///{PATH_DB}')
-        return self
+        cursor.execute(f"""SELECT activity,type,participants,price,link,key,accessibility FROM {TABLE_NAME} 
+                           ORDER BY id DESC
+                           LIMIT {quantity}""")
+
+        name_columns = [name[0] for name in cursor.description]
+        latest_fields = []
+
+        for filed in cursor.fetchall():
+            filed_str = ''
+
+            for idx,name in enumerate(name_columns):
+                filed_str += f'{name} -> {filed[idx]}, '
+
+            filed_str = filed_str[:-2]
+            latest_fields.append(filed_str)
+
+        return '\n'.join(latest_fields[::-1])
+
 
     def close(self):
-        if self.engine:
-            self.engine.dispose()
-        self.session = None
-        self.engine = None
+        self.db.close()
+
+    def connect(self):
+        self.db = sqlite3.connect(PATH_DB)
+        return self
+
+    def _create_table(self):
+        cursor = self.db.cursor()
+        cursor.execute(f"""CREATE TABLE {TABLE_NAME} (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        activity VARCHAR(255),  
+                        type VARCHAR(255),
+                        participants NUMERIC,
+                        price NUMERIC,
+                        link TEXT,
+                        key STRING,
+                        accessibility NUMERIC
+                        )""")
 
     def __enter__(self):
         self.connect()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        self.db.close()
 
 
+def check_table_exist():
+    with Activity_DB() as my_db:
+        cursor = my_db.db.cursor()
+
+        try:
+            cursor.execute(f'SELECT * FROM {TABLE_NAME}')
+        except sqlite3.OperationalError:
+            my_db._create_table()
+
+
+check_table_exist()

@@ -2,9 +2,8 @@ import requests
 
 class ApiWrapper:
     URL = 'https://www.boredapi.com/api/activity'
-    def get_response(self, activity=None, type=None, participants=None, price_min=None, price_max=None, accessibility_min=None, accessibility_max=None):
+    def get_response(self, type=None, participants=None, price_min=None, price_max=None, accessibility_min=None, accessibility_max=None):
         params_dict = {
-            'activity':activity,
             'type': type,
             'participants': participants,
             'minprice': price_min,
