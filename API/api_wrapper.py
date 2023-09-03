@@ -23,4 +23,3 @@ class ApiWrapper:
 
 
 
-print(ApiWrapper().get_response())
