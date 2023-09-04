@@ -17,9 +17,9 @@ if line_args.action == 'new':
     with Activity_DB() as my_db:
         wrapper = ApiWrapper()
         activity = wrapper.get_response(**activity_params)
-        my_db.create_field(activity)
+        result = my_db.create_field(activity)
 
-        print(activity)
+        print(result)
 else:
     with Activity_DB() as my_db:
         latest_entries = my_db.get_latest_entries(quantity=5)

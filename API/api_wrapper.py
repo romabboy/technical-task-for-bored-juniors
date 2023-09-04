@@ -13,9 +13,11 @@ class ApiWrapper:
         }
 
         params_dict = {key:value for (key,value) in params_dict.items() if value}
-        response = requests.get(self.URL, params=params_dict).json()
+        response = requests.get(self.URL, params=params_dict)
 
-        return response
+        activity = response.json()
+
+        return activity
 
 
 

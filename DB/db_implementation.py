@@ -5,7 +5,7 @@ import sqlite3
 NAME_DB = 'sqlite3.db'
 TABLE_NAME = 'activity'
 BASE_DIR = Path(__file__).resolve().parent.parent
-PATH_DB = path.join(BASE_DIR,NAME_DB)
+PATH_DB = path.join(BASE_DIR, NAME_DB)
 
 
 class Activity_DB:
@@ -14,13 +14,25 @@ class Activity_DB:
 
     def create_field(self, activity: dict):
         cursor = self.db.cursor()
+        result = activity
 
-        cursor.execute(f"""INSERT INTO {TABLE_NAME} (activity,type,participants,price,link,key,accessibility)
-                        VALUES ("{activity['activity']}","{activity['type']}",{activity['participants']},{activity['price']},
-                                "{activity['link']}","{activity['key']}",{activity['accessibility']})
-        """)
+        try:
+            cursor.execute(f"""INSERT INTO {TABLE_NAME} (activity,type,participants,price,link,key,accessibility)
+                            VALUES ("{activity['activity']}","{activity['type']}",{activity['participants']},{activity['price']},
+                                    "{activity['link']}","{activity['key']}",{activity['accessibility']})
+            """)
+
+        except sqlite3.OperationalError:
+            result = 'An error occurred while inserting into the database'
+        except Exception:
+            result = 'Something went wrong'
+
+            error = activity.get('error')
+            if error: result = error
 
         self.db.commit()
+
+        return result
 
     def get_latest_entries(self, quantity=5):
         cursor = self.db.cursor()
@@ -35,14 +47,13 @@ class Activity_DB:
         for filed in cursor.fetchall():
             filed_str = ''
 
-            for idx,name in enumerate(name_columns):
+            for idx, name in enumerate(name_columns):
                 filed_str += f'{name} -> {filed[idx]}, '
 
             filed_str = filed_str[:-2]
             latest_fields.append(filed_str)
 
         return '\n'.join(latest_fields[::-1])
-
 
     def close(self):
         self.db.close()
